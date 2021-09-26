@@ -29,7 +29,8 @@ THANK_YOU_FULL_PATH=THANK_YOU_WAVS_PATH + '/' + THANK_YOU_WAV
 
 SAD_FULL_PATH='/home/pi/Merrill/recordings/dog_potty/western_feeding_sad.wav'
 
-MAX_ALERT_LOOPS=4
+MAX_ALERT_LOOPS=8
+INT_BLINKS=8
 BUTTON_STATE='ON'
 
 def update_button_state():
@@ -85,10 +86,10 @@ def main():
                 if BUTTON_STATE == 'ON':
                     #board.led.state = Led.ON
 
-                    # After every cycle of 4 blinks, play the alert sound    
+                    # After every cycle of INT_BLINKS blinks, play the alert sound    
                     play_wav(ALERT_FULL_PATH)
 
-                    for x in range(4):
+                    for x in range(INT_BLINKS):
                         print(x)
 
                         #Check if the button state changed

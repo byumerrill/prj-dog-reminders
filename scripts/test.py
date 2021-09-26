@@ -38,8 +38,7 @@ SAD_FULL_PATH='/home/pi/Merrill/recordings/dog_potty/western_potty_sad.wav'
 DB_URL='/home/pi/Merrill/sql/doggyremindersdb'
 
 
-MAX_ALERT_LOOPS=8
-INT_BLINKS=8
+MAX_ALERT_LOOPS=4
 BUTTON_STATE='ON'
 
 
@@ -63,16 +62,24 @@ def main():
 
 	result_set, rows=run_query(conn, query)
 
+	print("rows: ", rows)
 
 	if rows < 1 :
 		print("No rows returned from query")
-		query="select assignee_id, first_name from assignee order by assignee_id asc limit 1;"
-		result_set, rows =run_query(conn, query)
 
+	elif result_set is None:
+		print("result_set was not defined")
+		sys.exit(1)
+	elif not result_set:
+		print("Query returned no records! Query: ", query)
+		query="select assignee_id, first_name from assignee order by assignee_id asc limit 1"
+		result_set=run_query(conn, query)
+	else:
+		print("result_set had data!")
 
-	for row in result_set:
-		print("ID: ", row[0])
-		print("Name: ", row[1])
+		for row in result_set:
+			print("ID: ", row[0])
+			print("Name: ", row[1])
 
 	conn.close()
 
@@ -106,10 +113,10 @@ def main():
 				if BUTTON_STATE == 'ON':
 					#board.led.state = Led.ON
 
-					# After every cycle of INT_BLINKS blinks, play the alert sound
+					# After every cycle of 4 blinks, play the alert sound
 					play_wav(ALERT_FULL_PATH)
 
-					for x in range(INT_BLINKS):
+					for x in range(4):
 						print(x)
 
 						#Check if the button state changed
@@ -145,50 +152,11 @@ def main():
 
 def run_query(sql_conn, str_query):
 
-	print("Running Query: ", str_query)
 	cursor=sql_conn.cursor()
 	cursor.execute(str_query)
 	records=cursor.fetchall()
-	if records:
-		print("records list is not empty")
-	else:
-		print("records list is EMPTY!")
-
-
-	first_row=records[0]
-	first_col=first_row[0]
-	record_count = len(records)
-
-	# Check for null first_row
-	if first_row is None:
-		print("first_row is None")
-		records=[]
-		record_count=0
-
-	# Check for empty String first_row
-	elif not first_row:
-		print("not first_row  which means EMPTY STRING")
-		records=[]
-		record_count=0
-	else:
-		print("Found data in first_row: ", first_row)
-
-
-	# Check for null first_col
-	if first_col is None:
-		print("first_col is None")
-		records=[]
-		record_count=0
-
-	# Check for empty String first_col
-	elif not first_col:
-		print("not first_col  which means EMPTY STRING")
-		records=[]
-		record_count=0
-	else:
-		print("Found data in first_col: ", first_col)
-
-	print("length of records list: ", record_count)
+	record_count = cursor.rowcount
+	print("cursor.rowcount:", record_count)
 	cursor.close()
 	return records, record_count
 
