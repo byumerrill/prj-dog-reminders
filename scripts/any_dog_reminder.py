@@ -44,7 +44,7 @@ BUTTON_STATE='ON'
 DB_NAME='doggyremindersdb'
 TBL_EVENTS='reminder_events'
 TBL_ASSIGNEE='assignee'
-DB_URL='/home/pi/Merrill/sql/' + DB_NAME
+DB_URL='/home/pi/Merrill/databases' + DB_NAME
 
 
 
