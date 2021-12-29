@@ -44,7 +44,7 @@ BUTTON_STATE='ON'
 DB_NAME='doggyremindersdb'
 TBL_EVENTS='reminder_events'
 TBL_ASSIGNEE='assignee'
-DB_URL='/home/pi/Merrill/databases' + DB_NAME
+DB_URL='/home/pi/Merrill/databases/' + DB_NAME
 
 
 
@@ -66,12 +66,13 @@ def main():
 	reminder_type='test'
 
 
+	# First, determine who the next assignee should be, by referncing the most recent reminder.
 	#query="select * from assignee;"
 	query="select max(reminder_id) from " + TBL_EVENTS + " where reminder_id is not null;"
 
 	result_set, rows=run_query(conn, query)
 
-
+	# If there is no pre-existing reminders in the db, get the first assignee, by ID
 	if rows < 1 :
 		print("No rows returned from query")
 		query="select assignee_id, first_name from " + TBL_ASSIGNEE + " order by assignee_id asc limit 1;"
@@ -79,10 +80,24 @@ def main():
 
 
 	for row in result_set:
-		print("ID: ", row[0])
-		print("Name: ", row[1])
+		print("Assignee ID: ", row[0])
+		print("Assignee Name: ", row[1])
+
+
+
+	# Next insert the new reminder event into the db using "insert_event" function
+	
+
+
 
 	conn.close()
+
+
+	# Next, "sound the alarm" for the reminder
+
+
+
+
 
 
 ####################################################################
@@ -220,6 +235,7 @@ def run_query(sql_conn, str_query):
 def create_sqlite_conn(db_file):
 	""" create a database connection to a SQLite database """
 	conn = None
+	print('Connecting to db:"', db_file, '"') 
 	try:
 		conn = sqlite3.connect(db_file)
 		print(sqlite3.version)
