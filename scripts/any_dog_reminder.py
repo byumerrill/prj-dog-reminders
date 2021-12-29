@@ -45,6 +45,8 @@ DB_NAME='doggyremindersdb'
 TBL_EVENTS='reminder_events'
 TBL_ASSIGNEE='assignee'
 DB_URL='/home/pi/Merrill/databases/' + DB_NAME
+CURR_ASSIGNEE_NM=''
+CURR_ASSIGNEE_ID=''
 
 
 
@@ -80,14 +82,19 @@ def main():
 
 
 	for row in result_set:
-		print("Assignee ID: ", row[0])
-		print("Assignee Name: ", row[1])
+		CURR_ASSIGNEE_ID=row[0]
+		CURR_ASSIGNEE_NM=row[1]
+		print("Assignee ID: ", CURR_ASSIGNEE_ID)
+		print("Assignee Name: ", CURR_ASSIGNEE_NM)
+
 
 
 
 	# Next insert the new reminder event into the db using "insert_event" function
-	
-
+	# sql = ''' INSERT INTO ''' + TBL_EVENTS + '''(reminder_script_nm, reminder_script_url, reminder_gmts, reminder_ts, reminder_day_of_wk, reminder_date, reminder_type, assignee_nm, reminder_audio_file_nm, reminder_audio_file_url) values (?,?,?,?,?,?,?,?,?,?) '''	
+	reminder_event = (reminder_script_nm, reminder_script_url, reminder_gmts, reminder_ts, reminder_day_of_wk, reminder_date, reminder_type,CURR_ASSIGNEE_NM, 'DUMMY AUDIO FILE NAME', 'DUMMY AUDIO FILE URL' )
+	insert_result=insert_event(reminder_event)
+	print("Result of attempted insert: ", insert_result)
 
 
 	conn.close()
