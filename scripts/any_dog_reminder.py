@@ -35,38 +35,46 @@ ALERT_FULL_PATH=ALERT_WAVS_PATH + '/' + ALERT_WAV
 THANK_YOU_FULL_PATH=THANK_YOU_WAVS_PATH + '/' + THANK_YOU_WAV
 
 SAD_FULL_PATH='/home/pi/Merrill/recordings/dog_potty/western_potty_sad.wav'
-DB_URL='/home/pi/Merrill/sql/doggyremindersdb'
 
 
 MAX_ALERT_LOOPS=8
 INT_BLINKS=8
 BUTTON_STATE='ON'
 
-
+DB_NAME='doggyremindersdb'
+TBL_EVENTS='reminder_events'
+TBL_ASSIGNEE='assignee'
+DB_URL='/home/pi/Merrill/sql/' + DB_NAME
 
 
 
 def main():
 
+	global DB_URL
+
+
 	#Connect to sqlite db
 	conn=create_sqlite_conn(DB_URL)
+	
 
+	reminder_script_nm=os.path.basename(__file__)
+	reminder_script_url=Path(__file__).parent.resolve()
 	reminder_gmts=time.strftime("%a, %d %b %Y %I:%M:%S %p %Z", time.gmtime())
 	reminder_ts=strftime("%a, %d %b %Y %I:%M:%S %p %Z")
 	reminder_day_of_wk=strftime("%A")
 	reminder_date=strftime("%Y-%m-%d")
-	reminder_script_nm=os.path.basename(__file__)
-	reminder_script_url=Path(__file__).parent.resolve()
+	reminder_type='test'
+
 
 	#query="select * from assignee;"
-	query="select max(reminder_id) from reminder_events where reminder_id is not null;"
+	query="select max(reminder_id) from " + TBL_EVENTS + " where reminder_id is not null;"
 
 	result_set, rows=run_query(conn, query)
 
 
 	if rows < 1 :
 		print("No rows returned from query")
-		query="select assignee_id, first_name from assignee order by assignee_id asc limit 1;"
+		query="select assignee_id, first_name from " + TBL_ASSIGNEE + " order by assignee_id asc limit 1;"
 		result_set, rows =run_query(conn, query)
 
 
@@ -138,6 +146,18 @@ def main():
 
 				#Increment alert loop counter
 				alert_loop_counter +=1
+
+
+
+def insert_event(sql_conn,tpl_event):
+	global TBL_EVENTS
+
+	print("Inserting this tuple into the db: ", tpl_event)
+	cur = sql_conn.cursor()
+	sql = ''' INSERT INTO ''' + TBL_EVENTS + '''(reminder_script_nm, reminder_script_url, reminder_gmts, reminder_ts, reminder_day_of_wk, reminder_date, reminder_type, assignee_nm, reminder_audio_file_nm, reminder_audio_file_url) values (?,?,?,?,?,?,?,?,?,?) '''
+	cur.execute(sql, tpl_event)
+	sql_conn.commit()
+	return cur.lastrowid
 
 
 
