@@ -13,12 +13,13 @@ CREATE TABLE IF NOT EXISTS reminder_events (
 	reminder_day_of_wk TEXT, /* reminder event day of week */
 	reminder_date TEXT, /* reminder event date */
 	reminder_type TEXT, /* reminder type ['potty','feeding'] */
-	assignee_nm INTEGER, /* name of family member assigned to take action on this reminder */
+	assignee_id INTEGER, /* ID of person assigned to take action on this reminder */
 	reminder_audio_file_nm TEXT, /* audio file name selected for this reminder */
 	reminder_audio_file_url TEXT, /* full path of audio file name selected for this reminder */
-	FOREIGN KEY (assignee_nm) 
-		REFERENCES assignee (assignee_nm) 
+	FOREIGN KEY (assignee_id) 
+		REFERENCES assignee (assignee_id) 
 		ON DELETE CASCADE 
 		ON UPDATE NO ACTION
 )
+
 
