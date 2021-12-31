@@ -13,13 +13,39 @@ import os
 import pathlib
 from pathlib import Path
 import sys
+import random
+import argparse
 
 
-startTime = datetime.now()
-print("startTime:" + startTime)
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("-rt", "--ReminderType", type=str, help="Reminder Type, ex: 'potty' or 'food'")
+args = parser.parse_args()
+
+
+REMINDER_TYPE=args.ReminderType
+print("REMINDER_TYPE: " + REMINDER_TYPE)
+
+#parser = argparse.ArgumentParser(description='Reminder Information')
+#parser.add_argument('--rt', dest='reminder_type', type=str, help='Reminder Type, ex: "potty" or "food"')
+#parser.add_argument('--surname', dest='surname', type=str, help='Surname of the candidate')
+#parser.add_argument('--age', dest='age', type=int, help='Age of the candidate')
+
+
+#startTime = datetime.now()
+#startTime:2021-12-31 14:47:45.474007
+#print("startTime:" + str(startTime))
+
+
+print("**********************")
+print("THIS IS THE BEGINNING!")
+print("**********************")
 
 TimerStartTime= time.time()
-print("TimerStartTime:" + TimerStartTime)
+#TimerStartTime:1640987265.4756098
+print("TimerStartTime:" + str(TimerStartTime))
+
+
 
 # Change the sound volume any time by running the command: `alsamixer`
 
@@ -41,8 +67,8 @@ THANK_YOU_FULL_PATH=THANK_YOU_WAVS_PATH + '/' + THANK_YOU_WAV
 SAD_FULL_PATH='/home/pi/Merrill/recordings/dog_potty/western_potty_sad.wav'
 
 
-MAX_ALERT_LOOPS=8
-INT_BLINKS=8
+MAX_ALERT_LOOPS=2
+INT_BLINKS=2
 BUTTON_STATE='ON'
 
 DB_NAME='doggyremindersdb'
@@ -57,7 +83,7 @@ REMINDER_RESOLVED_TS=''
 def main():
 
 	global DB_URL
-
+	global REMINDER_TYPE
 
 	#Connect to sqlite db
 	conn=create_sqlite_conn(DB_URL)
@@ -65,16 +91,18 @@ def main():
 
 	reminder_script_nm=os.path.basename(__file__)
 	reminder_script_url=str(Path(__file__).parent.resolve())
-	reminder_gmts=time.strftime("%a, %d %b %Y %I:%M:%S %p %Z", time.gmtime())
-	reminder_ts=strftime("%a, %d %b %Y %I:%M:%S %p %Z")
-	reminder_day_of_wk=strftime("%A")
-	reminder_date=strftime("%Y-%m-%d")
-	reminder_type='test'
+	reminder_gmts=time.strftime("%a, %d %b %Y %I:%M:%S %p %Z", time.gmtime(TimerStartTime))
+	reminder_ts=strftime("%a, %d %b %Y %I:%M:%S %p %Z", time.localtime(TimerStartTime))
+	reminder_day_of_wk=strftime("%A", time.localtime(TimerStartTime))
+	reminder_date=strftime("%Y-%m-%d", time.localtime(TimerStartTime))
+	#reminder_type='test'
 
 
 	# First, determine who the next assignee should be, by referncing the most recent reminder.
 	#query="select * from assignee;"
-	query="select max(reminder_id) from " + TBL_EVENTS + " where reminder_id is not null;"
+	#query="select max(reminder_id) from " + TBL_EVENTS + " where reminder_id is not null;"
+	#query="select COALESCE(assignee_id,1) from " + TBL_EVENTS + " where reminder_id is not null order by reminder_id DESC limit 1;"
+	query="select re.assignee_id, a.first_name from " + TBL_EVENTS + " re inner join " + TBL_ASSIGNEE + " a on re.assignee_id=a.assignee_id where reminder_id is not null order by reminder_id DESC limit 1;"
 
 	result_set, rows=run_query(conn, query)
 
@@ -97,7 +125,7 @@ def main():
 	# Next insert the new reminder event into the db using "insert_event" function
 	# sql = ''' INSERT INTO ''' + TBL_EVENTS + '''(reminder_script_nm, reminder_script_url, reminder_gmts, reminder_ts, reminder_day_of_wk, reminder_date, reminder_type, assignee_nm, reminder_audio_file_nm, reminder_audio_file_url) values (?,?,?,?,?,?,?,?,?,?) '''	
 	#reminder_event = (reminder_script_nm, reminder_script_url, reminder_gmts, reminder_ts, reminder_day_of_wk, reminder_date, reminder_type,CURR_ASSIGNEE_NM, 'DUMMY AUDIO FILE NAME', 'DUMMY AUDIO FILE URL' )
-	reminder_event = (reminder_script_nm, reminder_script_url, reminder_gmts, reminder_ts, reminder_day_of_wk, reminder_date, reminder_type,CURR_ASSIGNEE_NM, 'DUMMY AUDIO FILE NAME', 'DUMMY AUDIO FILE URL' )
+	reminder_event = (reminder_script_nm, reminder_script_url, reminder_gmts, reminder_ts, reminder_day_of_wk, reminder_date, REMINDER_TYPE,CURR_ASSIGNEE_ID, 'DUMMY AUDIO FILE NAME', 'DUMMY AUDIO FILE URL' )
 	insert_result=insert_event(conn, reminder_event)
 	print("Result of attempted insert: ", insert_result)
 
@@ -105,16 +133,25 @@ def main():
 	conn.close()
 
 
-	# Next, "sound the alarm" for the reminder
+	# Next, DETERMINE VALUE OF REMINDER_TYPE 
+	# Then, determine the appropriate recordings for the reminder and the assignee
+	# Then, play the recordings
+	# Then, loop until time runs out or reminder is resolved
+	# Then, log to the DB, including response time and whether reminder timed out or was resolved
 
 
+	
+	randomInt=random.randrange(1,10)
+	print("random: " + str(randomInt))
+	time.sleep(randomInt)
 
 	TimerEndtTime= time.time()
-	print("TimerEndtTime:" + TimerEndtTime)
+	print("TimerEndtTime:" + str(TimerEndtTime))
 
-	TimerElapsedTime = TimerStartTime - TimerEndtTime
-	print("TimerElapsedTime: " + TimerElapsedTime)	
+	TimerElapsedTime = TimerEndtTime - TimerStartTime
+	print("TimerElapsedTime: " + str(TimerElapsedTime))
 
+	
 
 ####################################################################
 	# Debug step to exit early
@@ -185,7 +222,7 @@ def insert_event(sql_conn,tpl_event):
 
 	print("Inserting this tuple into the db: ", tpl_event)
 	cur = sql_conn.cursor()
-	sql = ''' INSERT INTO ''' + TBL_EVENTS + '''(reminder_script_nm, reminder_script_url, reminder_gmts, reminder_ts, reminder_day_of_wk, reminder_date, reminder_type, assignee_nm, reminder_audio_file_nm, reminder_audio_file_url) values (?,?,?,?,?,?,?,?,?,?) '''
+	sql = ''' INSERT INTO ''' + TBL_EVENTS + '''(reminder_script_nm, reminder_script_url, reminder_gmts, reminder_ts, reminder_day_of_wk, reminder_date, reminder_type, assignee_id, reminder_audio_file_nm, reminder_audio_file_url) values (?,?,?,?,?,?,?,?,?,?) '''
 	cur.execute(sql, tpl_event)
 	sql_conn.commit()
 	return cur.lastrowid
