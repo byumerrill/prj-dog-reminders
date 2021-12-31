@@ -60,7 +60,7 @@ def main():
 	
 
 	reminder_script_nm=os.path.basename(__file__)
-	reminder_script_url=Path(__file__).parent.resolve()
+	reminder_script_url=str(Path(__file__).parent.resolve())
 	reminder_gmts=time.strftime("%a, %d %b %Y %I:%M:%S %p %Z", time.gmtime())
 	reminder_ts=strftime("%a, %d %b %Y %I:%M:%S %p %Z")
 	reminder_day_of_wk=strftime("%A")
@@ -92,8 +92,9 @@ def main():
 
 	# Next insert the new reminder event into the db using "insert_event" function
 	# sql = ''' INSERT INTO ''' + TBL_EVENTS + '''(reminder_script_nm, reminder_script_url, reminder_gmts, reminder_ts, reminder_day_of_wk, reminder_date, reminder_type, assignee_nm, reminder_audio_file_nm, reminder_audio_file_url) values (?,?,?,?,?,?,?,?,?,?) '''	
+	#reminder_event = (reminder_script_nm, reminder_script_url, reminder_gmts, reminder_ts, reminder_day_of_wk, reminder_date, reminder_type,CURR_ASSIGNEE_NM, 'DUMMY AUDIO FILE NAME', 'DUMMY AUDIO FILE URL' )
 	reminder_event = (reminder_script_nm, reminder_script_url, reminder_gmts, reminder_ts, reminder_day_of_wk, reminder_date, reminder_type,CURR_ASSIGNEE_NM, 'DUMMY AUDIO FILE NAME', 'DUMMY AUDIO FILE URL' )
-	insert_result=insert_event(reminder_event)
+	insert_result=insert_event(conn, reminder_event)
 	print("Result of attempted insert: ", insert_result)
 
 
