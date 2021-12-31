@@ -16,6 +16,10 @@ import sys
 
 
 startTime = datetime.now()
+print("startTime:" + startTime)
+
+TimerStartTime= time.time()
+print("TimerStartTime:" + TimerStartTime)
 
 # Change the sound volume any time by running the command: `alsamixer`
 
@@ -47,7 +51,7 @@ TBL_ASSIGNEE='assignee'
 DB_URL='/home/pi/Merrill/databases/' + DB_NAME
 CURR_ASSIGNEE_NM=''
 CURR_ASSIGNEE_ID=''
-
+REMINDER_RESOLVED_TS=''
 
 
 def main():
@@ -104,7 +108,11 @@ def main():
 
 
 
+	TimerEndtTime= time.time()
+	print("TimerEndtTime:" + TimerEndtTime)
 
+	TimerElapsedTime = TimerStartTime - TimerEndtTime
+	print("TimerElapsedTime: " + TimerElapsedTime)	
 
 
 ####################################################################
@@ -256,10 +264,10 @@ def create_sqlite_conn(db_file):
 def update_button_state():
 	global BUTTON_STATE
 	if BUTTON_STATE == 'OFF':
-		#print('Button state was OFF. Switching to ON')
+		print('Button state was OFF. Switching to ON')
 		BUTTON_STATE='ON'
 	elif BUTTON_STATE == 'ON':
-		#print('Button state was ON. Switching to OFF')
+		print('Button state was ON. Switching to OFF')
 		BUTTON_STATE='OFF'
 	else:
 		print('Button was in an unknown state! Turning off now to be safe...')
@@ -271,6 +279,7 @@ def button_print():
 	update_button_state()
 
 def alert_resolved():
+	REMINDER_RESOLVED_TS=strftime("%a, %d %b %Y %I:%M:%S %p %Z")
 	global THANK_YOU_FULL_PATH
 	with Board() as board:
 		with Leds() as leds:
