@@ -267,6 +267,10 @@ def main():
 					# p.subprocess is dead/stopped/completed
 					print("Time ran out - nobody came to press the button and resolve the alert :sad_face: ")
 
+					# Update button light to "sad" yellow blinking
+					leds.pattern = Pattern.breathe(3000)
+					leds.update(Leds.rgb_pattern(Color.YELLOW))
+
 					final_wrap_up('TIMED_OUT')
 
 					# Break out of the while loop and udpate DB
@@ -281,7 +285,8 @@ def main():
 					print("Someone has come to resolve the alert! Someone has physically pushed the button!")
 
 					# Stop Blinking RED, start blinking "Happy" BLUE
-					board.led.state = Led.OFF
+					leds.pattern = Pattern.breathe(3000)
+					leds.update(Leds.rgb_pattern(Color.BLUE))
 
 					# Terminate the process that is playing the alert on loop
 					print("Terminating " + str(p.pid) + " the process that is playing the alert on loop")
@@ -304,6 +309,9 @@ def main():
 
 
 def final_wrap_up(final_status):
+	# Stop the timer, blink the right kind of light, play the right closing sound, and update the database
+
+
 	print("Executing fuction: 'final_wrap_up()'")
 	print("final_status:" + final_status)
 	stop_timer()
@@ -331,53 +339,49 @@ def final_wrap_up(final_status):
 	# Make sure the 'aplay' program is not still playing any wavs
 	kill_sounds()
 
-	with Board() as board:
-		with Leds() as leds:
-			board.led.state = Led.OFF
-
-			#Connect to sqlite db
-			conn=create_sqlite_conn(DB_URL)
-
-			# Next insert the new reminder event into the db using "insert_event" function
-			#                 reminder_script_nm, reminder_script_url, reminder_gmts, reminder_ts, reminder_day_of_wk, reminder_date, reminder_type, assignee_nm,      reminder_audio_file_nm, reminder_audio_file_url, reminder_final_status,  reminder_elapsed_sec_qty) values (?,?,?,?,?,?,?,?,?,?,?,?) '''	
-			reminder_event = (reminder_script_nm, reminder_script_url, reminder_gmts, reminder_ts, reminder_day_of_wk, reminder_date, REMINDER_TYPE, curr_assignee_id, ALERT_WAV,              ALERT_FULL_PATH,         final_status, int_elapsed_time_seconds)
-			insert_result=insert_event(conn, reminder_event)
-			print("Result of attempted insert: ", insert_result)
-
-			# Close DB Connection
-			conn.close()
+	blink_time=0
 
 
-			if final_status == 'BUTTON_PRESSED':
-				leds.pattern = Pattern.breathe(3000)
-				leds.update(Leds.rgb_pattern(Color.BLUE))
+	if final_status == 'BUTTON_PRESSED':
 
-				# Play the gratitude message
-				print("Now playing the Happy recording of gratitude: " + THANK_YOU_FULL_PATH)
-				print("wav_player_full_path: " + wav_player_full_path)
-				p=subprocess.Popen([wav_player_full_path, '-wf', THANK_YOU_FULL_PATH, '-i', '1', '-s', '1'])
-				print("Sub process id: " + str(p.pid))
+		# Play the gratitude message
+		print("Now playing the Happy recording of gratitude: " + THANK_YOU_FULL_PATH)
+		print("wav_player_full_path: " + wav_player_full_path)
+		p=subprocess.Popen([wav_player_full_path, '-wf', THANK_YOU_FULL_PATH, '-i', '1', '-s', '1'])
+		print("Sub process id: " + str(p.pid))
 
-				# "Breathe" blue for INT_HAPPY_BLINK_SECONDS seconds to show the alert was resolved
-				print("Sleeping for INT_HAPPY_BLINK_SECONDS: " + str(INT_HAPPY_BLINK_SECONDS))
-				time.sleep(INT_HAPPY_BLINK_SECONDS)
-			elif final_status == 'TIMED_OUT':
-				# Update button light to "sad" yellow blinking
-				leds.pattern = Pattern.breathe(3000)
-				leds.update(Leds.rgb_pattern(Color.YELLOW))
+		# "Breathe" blue for INT_HAPPY_BLINK_SECONDS seconds to show the alert was resolved
+		print("Sleeping for INT_HAPPY_BLINK_SECONDS: " + str(INT_HAPPY_BLINK_SECONDS))
+		blink_time=INT_HAPPY_BLINK_SECONDS
+	elif final_status == 'TIMED_OUT':
 
-				# Play the sad recording
-				print("Now playing the sad recording: " + SAD_FULL_PATH)
-				p=subprocess.Popen([wav_player_full_path, '-wf', SAD_FULL_PATH, '-i', '1', '-s', '1'])
-				print("Sub process id: " + str(p.pid))					
+		# Play the sad recording
+		print("Now playing the sad recording: " + SAD_FULL_PATH)
+		p=subprocess.Popen([wav_player_full_path, '-wf', SAD_FULL_PATH, '-i', '1', '-s', '1'])
+		print("Sub process id: " + str(p.pid))					
 
-				# "Breathe" YELLOW for INT_SAD_BLINK_SECONDS to show the alert was NOT resolved, then exit script
-				print("Sleeping for INT_SAD_BLINK_SECONDS: " + str(INT_SAD_BLINK_SECONDS))
-				time.sleep(INT_SAD_BLINK_SECONDS)
-			else:
-				print("ERROR: Unknown final state, final_status:" + final_status)
-				exit(1)
+		# "Breathe" YELLOW for INT_SAD_BLINK_SECONDS to show the alert was NOT resolved, then exit script
+		print("Sleeping for INT_SAD_BLINK_SECONDS: " + str(INT_SAD_BLINK_SECONDS))
+		blink_time=INT_SAD_BLINK_SECONDS
+	else:
+		print("ERROR: Unknown final state, final_status:" + final_status)
+		exit(1)
 
+
+	#Connect to sqlite db
+	conn=create_sqlite_conn(DB_URL)
+
+	# Next insert the new reminder event into the db using "insert_event" function
+	#                 reminder_script_nm, reminder_script_url, reminder_gmts, reminder_ts, reminder_day_of_wk, reminder_date, reminder_type, assignee_nm,      reminder_audio_file_nm, reminder_audio_file_url, reminder_final_status,  reminder_elapsed_sec_qty) values (?,?,?,?,?,?,?,?,?,?,?,?) '''	
+	reminder_event = (reminder_script_nm, reminder_script_url, reminder_gmts, reminder_ts, reminder_day_of_wk, reminder_date, REMINDER_TYPE, curr_assignee_id, ALERT_WAV,              ALERT_FULL_PATH,         final_status, int_elapsed_time_seconds)
+	insert_result=insert_event(conn, reminder_event)
+	print("Result of attempted insert: ", insert_result)
+
+	# Close DB Connection
+	conn.close()
+
+	# Sleep for allotted time
+	time.sleep(blink_time)
 
 
 def stop_timer():
