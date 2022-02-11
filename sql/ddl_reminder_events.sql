@@ -16,10 +16,12 @@ CREATE TABLE IF NOT EXISTS reminder_events (
 	assignee_id INTEGER, /* ID of person assigned to take action on this reminder */
 	reminder_audio_file_nm TEXT, /* audio file name selected for this reminder */
 	reminder_audio_file_url TEXT, /* full path of audio file name selected for this reminder */
+  	reminder_final_status TEXT, /* the final state of the reminder, ex: TIMED_OUT or BUTTON_PRESSED */
+  	reminder_elapsed_sec_qty INTEGER, /* number of seconds it took for button to be pressed or timeout to occur */
 	FOREIGN KEY (assignee_id) 
 		REFERENCES assignee (assignee_id) 
 		ON DELETE CASCADE 
 		ON UPDATE NO ACTION
-)
+);
 
 
