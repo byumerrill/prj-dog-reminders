@@ -17,10 +17,18 @@ import random
 import argparse
 import subprocess
 
+# Number of family members who could be assigned to take action on a reminder
 INT_TOTAL_AVAILABLE_ASSIGNEES=4
-MAX_ALERT_LOOPS=5
-INT_BLINKS=2
+
+# Maximum number of times an alert sound could be played (when waiting for alert resolution)
+INT_MAX_ALERT_LOOPS=5
+
+# Number of seconds to pause between each loop (when waiting for alert resolution)
+INT_LOOP_PAUSE_SECONDS=10
+
+# Number of seconds to for button blink "sad" yellow if alert is not resolved before timeout
 INT_SAD_BLINK_SECONDS=60
+
 BUTTON_STATE='ON'
 DB_NAME='doggyremindersdb'
 TBL_EVENTS='reminder_events'
@@ -70,13 +78,6 @@ WAV_PLAYER_SCRIPT_NM="play_wav_file.py"
 WAV_KILLER_SCRIPT_NM="kill_wav.sh"
 WAV_KILLER_SCRIPT_PATH=SCRIPTS_PATH + WAV_KILLER_SCRIPT_NM
 
-# Make sure the WAV_KILLER_SCRIPT_PATH is correct (file exists)
-if os.path.exists(WAV_KILLER_SCRIPT_PATH):
-	print("WAV_KILLER_SCRIPT_PATH is good, file exists: " + WAV_KILLER_SCRIPT_PATH)
-else:
-	print("ERROR! WAV_KILLER_SCRIPT_PATH is not good; File not found: " + WAV_KILLER_SCRIPT_PATH)
-	exit(1)
-
 
 # Set arg value to variable and force to lower case
 REMINDER_TYPE=args.ReminderType
@@ -121,9 +122,16 @@ def main():
 
 
 	# Validate paths
-	testPathOrFile(ALERT_WAVS_PATH)
-	testPathOrFile(THANK_YOU_WAVS_PATH)
-	testPathOrFile(SAD_WAVS_PATH)
+	pathsToValidate = [
+		BASE_PATH, 
+		SCRIPTS_PATH, 
+		AUDIO_REC_PATH, 
+		WAV_KILLER_SCRIPT_PATH, 
+		ALERT_WAVS_PATH, 
+		THANK_YOU_WAVS_PATH, 
+		SAD_WAVS_PATH
+	]
+	testPathsOrFiles(pathsToValidate)
 
 	# Randomly choose a recording to play for the initial alert, thank you response (when alert is resolved), and sad response (when alert times out)
 	ALERT_WAV=random.choice(os.listdir(ALERT_WAVS_PATH))
@@ -136,9 +144,12 @@ def main():
 	SAD_FULL_PATH=SAD_WAVS_PATH + '/' + SAD_WAV
 
 	# Validate files
-	testPathOrFile(ALERT_FULL_PATH)
-	testPathOrFile(THANK_YOU_WAVS_PATH)
-	testPathOrFile(SAD_FULL_PATH)
+	pathsToValidate = [
+		ALERT_FULL_PATH,
+		THANK_YOU_WAVS_PATH,
+		SAD_FULL_PATH,
+	]
+	testPathsOrFiles(pathsToValidate)
 
 
 	#Connect to sqlite db
@@ -194,7 +205,7 @@ def main():
 	# Next insert the new reminder event into the db using "insert_event" function
 	# sql = ''' INSERT INTO ''' + TBL_EVENTS + '''(reminder_script_nm, reminder_script_url, reminder_gmts, reminder_ts, reminder_day_of_wk, reminder_date, reminder_type, assignee_nm, reminder_audio_file_nm, reminder_audio_file_url) values (?,?,?,?,?,?,?,?,?,?) '''	
 	#reminder_event = (reminder_script_nm, reminder_script_url, reminder_gmts, reminder_ts, reminder_day_of_wk, reminder_date, reminder_type,CURR_ASSIGNEE_NM, 'DUMMY AUDIO FILE NAME', 'DUMMY AUDIO FILE URL' )
-	reminder_event = (reminder_script_nm, reminder_script_url, reminder_gmts, reminder_ts, reminder_day_of_wk, reminder_date, REMINDER_TYPE,CURR_ASSIGNEE_ID, 'DUMMY AUDIO FILE NAME', 'DUMMY AUDIO FILE URL' )
+	reminder_event = (reminder_script_nm, reminder_script_url, reminder_gmts, reminder_ts, reminder_day_of_wk, reminder_date, REMINDER_TYPE,CURR_ASSIGNEE_ID, ALERT_WAV, ALERT_FULL_PATH)
 	insert_result=insert_event(conn, reminder_event)
 	print("Result of attempted insert: ", insert_result)
 	
@@ -223,15 +234,15 @@ def main():
 
 	alert_loop_counter = 1
 	global BUTTON_STATE
-	global MAX_ALERT_LOOPS
+	global INT_MAX_ALERT_LOOPS
 	global WAV_PLAYER_SCRIPT_NM
 
 	wav_player_full_path=reminder_script_url + "/" + WAV_PLAYER_SCRIPT_NM
-	testPathOrFile(wav_player_full_path)
+	testPathsOrFiles([wav_player_full_path])
 
 
 	# Start a sub process that runs in the background, and have it loop through the alert
-	p=subprocess.Popen([wav_player_full_path, '-wf', ALERT_FULL_PATH, '-i', str(MAX_ALERT_LOOPS)])
+	p=subprocess.Popen([wav_player_full_path, '-wf', ALERT_FULL_PATH, '-i', str(INT_MAX_ALERT_LOOPS)])
 	print("Sub process id: " + str(p.pid))
 
 
@@ -240,7 +251,7 @@ def main():
 		with Leds() as leds:
 			while True:
 
-				print("alert_loop_counter " + str(alert_loop_counter) + "| MAX_ALERT_LOOPS: " + str(MAX_ALERT_LOOPS))
+				print("alert_loop_counter " + str(alert_loop_counter) + "| INT_MAX_ALERT_LOOPS: " + str(INT_MAX_ALERT_LOOPS))
 
 				# Start blinking red, until alert is resolved
 				if alert_loop_counter == 1 :
@@ -248,19 +259,10 @@ def main():
 					leds.update(Leds.rgb_pattern(Color.RED))
 
 				# Brief pause
-				time.sleep(5)
+				time.sleep(INT_LOOP_PAUSE_SECONDS)
 
 				#If nobody comes after "alert_loop_counter" reaches max, then stop and blink yellow and exit script
-				if alert_loop_counter > MAX_ALERT_LOOPS:
-
-					# Looking for sub process that is actually playing the wav file
-					# ps -ef | grep pi | grep aplay | grep wav | awk '{print $2}'
-					#print("Looking for child process id...")
-					#test=subprocess.check_output(["ps -ef | grep pi | grep aplay | grep wav"])
-					#print("test: " + test)
-					#test=subprocess.check_output(["ps -ef | grep pi | grep aplay | grep wav | awk '{print $2}'"])
-					#print("test: " + test)
-
+				if alert_loop_counter > INT_MAX_ALERT_LOOPS:
 
 					# Terminate the process that is playing the alert on loop
 					print("Terminating " + str(p.pid) + " the process that is playing the alert on loop")
@@ -273,17 +275,10 @@ def main():
 					# Sometimes the wav alert is still playing even though the alert script was killed.
 					# Make sure the 'aplay' program is not still playing any wavs
 					kill_sounds()
-					#print("Making sure all 'aplay' commands are stopped before playing sad recording.")
-					#pStopSound=subprocess.Popen([WAV_KILLER_SCRIPT_PATH])
-					#print("Sub process id of pStopSound: " + str(pStopSound.pid))
-					#print("Waiting for pStopSound to finish")
-					#pStopSound.wait()
-					#print("Process pStopSound finished: " + str(pStopSound.pid))
 
 					# Update button light to "sad" yellow blinking
 					leds.pattern = Pattern.breathe(3000)
 					leds.update(Leds.rgb_pattern(Color.YELLOW))
-					#play_wav(SAD_FULL_PATH)
 					
 					#time.sleep(5)
 					# Play the sad recording
@@ -297,7 +292,7 @@ def main():
 				board.button.when_pressed = update_button_state
 
 				if BUTTON_STATE == 'OFF':
-					
+					print("Someone has come to resolve the alert! Someone has physically pushed the button!")
 					# Stop Blinking
 					board.led.state = Led.OFF
 
@@ -307,8 +302,11 @@ def main():
 					print("Waiting for Termination of " + str(p.pid) + " the process that is playing the alert on loop")
 					p.wait()
 					print("Process Terminated " + str(p.pid) + " the process that is playing the alert on loop")
+					
 					# Make sure the 'aplay' program is not still playing any wavs
 					kill_sounds()
+
+					# Play the gratitude message
 					alert_resolved()
 
 
@@ -318,6 +316,7 @@ def main():
 
 
 def kill_sounds():
+	print("Executing fuction: 'kill_sounds())'")
 	global WAV_KILLER_SCRIPT_PATH
 	
 	print("Making sure all 'aplay' commands are stopped before playing sad recording.")
@@ -329,6 +328,7 @@ def kill_sounds():
 
 
 def insert_event(sql_conn,tpl_event):
+	print("Executing fuction: 'insert_event(sql_conn,tpl_event)'")
 	global TBL_EVENTS
 
 	print("Inserting this tuple into the db: ", tpl_event)
@@ -341,7 +341,7 @@ def insert_event(sql_conn,tpl_event):
 
 
 def run_query(sql_conn, str_query):
-
+	print("Executing fuction: 'run_query(sql_conn, str_query)'")
 	print("Running Query: ", str_query)
 	cursor=sql_conn.cursor()
 	cursor.execute(str_query)
@@ -395,8 +395,9 @@ def run_query(sql_conn, str_query):
 
 
 def create_sqlite_conn(db_file):
+	print("Executing fuction: 'create_sqlite_conn(db_file)'")
 	""" create a database connection to a SQLite database """
-	testPathOrFile(db_file)
+	testPathsOrFiles([db_file])
 	conn = None
 	print('Connecting to db:"', db_file, '"') 
 	try:
@@ -422,11 +423,10 @@ def update_button_state():
 		BUTTON_STATE='OFF'
 	#print(BUTTON_STATE)
 
-def button_print():
-	#print('Button has been pressed!')
-	update_button_state()
+
 
 def alert_resolved():
+	print("Executing fuction: 'alert_resolved()'")
 	REMINDER_RESOLVED_TS=strftime("%a, %d %b %Y %I:%M:%S %p %Z")
 	global THANK_YOU_FULL_PATH
 	with Board() as board:
@@ -438,21 +438,25 @@ def alert_resolved():
 			#"Breathe" blue for 9 seconds to show the alert was resolved
 			time.sleep(9)
 			sys.exit(0)
+			
 
-
-def testPathOrFile(path):
-	# Validate the given directory or file is valid
-	isValidFile = os.path.isfile(path) 
-	isValidDir = os.path.isdir(path)
-	if isValidDir:
-		print("path: " + path + " is a valid directory." )
-	elif isValidFile:
-		print("path: " + path + " is a valid file." )
-	else:
-		print("ERROR: path: " + path + " is NEITHER a valid DIRECTORY NOR is it a valid FILE." )
-		print("Exiting script.")
-		exit(1)
-
+def testPathsOrFiles(pathList):
+	print("Executing fuction: 'testPathsOrFiles(pathList)'")
+	print("The length of pathList is: " + str(len(pathList)))
+	list_loop_counter =1
+	for thisPath in pathList:
+		# Validate the given directory or file is valid
+		isValidFile = os.path.isfile(thisPath) 
+		isValidDir = os.path.isdir(thisPath)
+		if isValidDir:
+			print("path (" + str(list_loop_counter) + "): " + thisPath + " is a valid directory." )
+		elif isValidFile:
+			print("path (" + str(list_loop_counter) + "): " + thisPath + " is a valid file." )
+		else:
+			print("ERROR: path (" + str(list_loop_counter) + "): " + thisPath + " is NEITHER a valid DIRECTORY NOR is it a valid FILE." )
+			print("Exiting script.")
+			exit(1)
+		list_loop_counter +=1
 
 if __name__ == '__main__':
 	main()
