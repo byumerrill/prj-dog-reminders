@@ -21,10 +21,10 @@ import subprocess
 INT_TOTAL_AVAILABLE_ASSIGNEES=4
 
 # Maximum number of times an alert sound could be played (when waiting for alert resolution)
-INT_MAX_ALERT_LOOPS=5
+INT_MAX_ALERT_LOOPS=10
 
 # Number of seconds to pause between each loop (when waiting for alert resolution)
-INT_LOOP_PAUSE_SECONDS=10
+INT_LOOP_PAUSE_SECONDS=25
 
 # Number of seconds to for button blink "sad" yellow if alert is not resolved before timeout
 INT_SAD_BLINK_SECONDS=60
