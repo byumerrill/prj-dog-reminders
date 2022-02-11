@@ -43,7 +43,6 @@ curr_assignee_id=''
 str_timer_start=''
 str_timer_end=''
 int_elapsed_time_seconds=''
-str_final_alert_status=''
 reminder_script_nm=''
 reminder_script_url=''
 reminder_gmts=''
@@ -143,8 +142,10 @@ def main():
 	global reminder_day_of_wk
 	global reminder_date
 	global curr_assignee_id
-	global str_final_alert_status
 	global wav_player_full_path
+	global button_state
+	global INT_MAX_ALERT_LOOPS
+	global WAV_PLAYER_SCRIPT_NM
 
 	# Validate paths
 	pathsToValidate = [
@@ -234,24 +235,8 @@ def main():
 	conn.close()
 
 
-	
-	#randomInt=random.randrange(1,10)
-	#print("random: " + str(randomInt))
-	#time.sleep(randomInt)
-
-
-
-####################################################################
-	# Debug step to exit early
-	#sys.exit()
-####################################################################
-
-
 	alert_loop_counter = 1
-	global button_state
-	global INT_MAX_ALERT_LOOPS
-	global WAV_PLAYER_SCRIPT_NM
-	#global wav_player_full_path
+
 
 
 
@@ -266,102 +251,67 @@ def main():
 		with Leds() as leds:
 			while True:
 
-				#print("alert_loop_counter " + str(alert_loop_counter) + "| INT_MAX_ALERT_LOOPS: " + str(INT_MAX_ALERT_LOOPS))
-
 				# Start blinking red, until alert is resolved
 				if alert_loop_counter == 1 :
 					leds.pattern = Pattern.breathe(2000)
 					leds.update(Leds.rgb_pattern(Color.RED))
 
-				# Brief pause
-				#time.sleep(INT_LOOP_PAUSE_SECONDS)
-
 
 				# Check to see if the alert process "p" is still running. 
 				# If Running, continue looping
 				# If No longer running, then the alert has timed out - play the sad music
-				# If nobody comes after "alert_loop_counter" reaches max, then stop and blink yellow and exit script
-				
-
+				# If nobody comes after "alert_loop_counter" reaches max, then stop and blink yellow and exit script		
 				poll = p.poll()
-				#print("poll status: " + str(poll))
+
 				if poll is not None:
 					# p.subprocess is dead/stopped/completed
 					print("Time ran out - nobody came to press the button and resolve the alert :sad_face: ")
 
-					# Stop the timer and calc response time
-					#stop_timer()
-					str_final_alert_status='TIMED_OUT'
-					print("str_final_alert_status: " + str_final_alert_status)
+					final_wrap_up('TIMED_OUT')
 
-					# Sometimes the wav alert is still playing even though the alert script was killed.
-					# Make sure the 'aplay' program is not still playing any wavs
-					#kill_sounds()
-
-					# Update button light to "sad" yellow blinking
-					#leds.pattern = Pattern.breathe(3000)
-					#leds.update(Leds.rgb_pattern(Color.YELLOW))
-					
-					# Play the sad recording
-					#print("Now playing the sad recording: " + SAD_FULL_PATH)
-					#p=subprocess.Popen([wav_player_full_path, '-wf', SAD_FULL_PATH, '-i', '1'])
-					#print("Sub process id: " + str(p.pid))					
-					final_wrap_up()
 					# Break out of the while loop and udpate DB
 					print("Breaking out of the while loop")
 					break
 
+				# If someone presses the button, update button_state
 				board.button.when_pressed = update_button_state
 
+				# Check if someone pressed the button yet
 				if button_state == 'OFF':
 					print("Someone has come to resolve the alert! Someone has physically pushed the button!")
+
 					# Stop Blinking RED, start blinking "Happy" BLUE
 					board.led.state = Led.OFF
-					#leds.pattern = Pattern.breathe(3000)
-					#leds.update(Leds.rgb_pattern(Color.BLUE))
-
-					# Stop the timer and calc response time
-					#stop_timer()
-					str_final_alert_status='BUTTON_PRESSED'
-					print("str_final_alert_status: " + str_final_alert_status)
 
 					# Terminate the process that is playing the alert on loop
 					print("Terminating " + str(p.pid) + " the process that is playing the alert on loop")
 					os.kill(p.pid, signal.SIGTERM)
-					print("Waiting for Termination of " + str(p.pid) + " the process that is playing the alert on loop")
-					p.wait()
-					print("Process Terminated " + str(p.pid) + " the process that is playing the alert on loop")
-					
-					# Make sure the 'aplay' program is not still playing any wavs
-					kill_sounds()
+					#print("Waiting for Termination of " + str(p.pid) + " the process that is playing the alert on loop")
+					#p.wait()
+					#print("Process Terminated " + str(p.pid) + " the process that is playing the alert on loop")
+
 
 					# Play the gratitude message
-					#alert_resolved()
-					#board.led.state = Led.OFF
-					#p=subprocess.Popen([wav_player_full_path, '-wf', THANK_YOU_FULL_PATH, '-i', '1', '-s', '1'])
-					#play_wav(THANK_YOU_FULL_PATH)
-					final_wrap_up()
+					final_wrap_up('BUTTON_PRESSED')
+
 					# Break out of the while loop and udpate DB
 					print("Breaking out of the while loop")
 					break
-
-				# Increment alert loop counter
-				#alert_loop_counter +=1
 
 	print("Now out of the while loop")
 	sys.exit(0)
 
 
 
-def final_wrap_up():
+def final_wrap_up(final_status):
 	print("Executing fuction: 'final_wrap_up()'")
+	print("final_status:" + final_status)
 	stop_timer()
 	print("Back to executing fuction: 'final_wrap_up()'")
 
 	global INT_HAPPY_BLINK_SECONDS
 	global THANK_YOU_FULL_PATH
 	global SAD_FULL_PATH
-	global str_final_alert_status
 	global wav_player_full_path
 
 	#global variables for the db insert
@@ -375,7 +325,6 @@ def final_wrap_up():
 	global curr_assignee_id
 	global ALERT_WAV
 	global ALERT_FULL_PATH
-	global str_final_alert_status
 	global int_elapsed_time_seconds
 
 
@@ -385,27 +334,21 @@ def final_wrap_up():
 	with Board() as board:
 		with Leds() as leds:
 			board.led.state = Led.OFF
-			#p=subprocess.Popen([wav_player_full_path, '-wf', THANK_YOU_FULL_PATH, '-i', '1', '-s', str(INT_HAPPY_BLINK_SECONDS)])
-			#play_wav(THANK_YOU_FULL_PATH)
-			#leds.pattern = Pattern.breathe(3000)
-			#leds.update(Leds.rgb_pattern(Color.BLUE))
-
 
 			#Connect to sqlite db
 			conn=create_sqlite_conn(DB_URL)
 
 			# Next insert the new reminder event into the db using "insert_event" function
 			#                 reminder_script_nm, reminder_script_url, reminder_gmts, reminder_ts, reminder_day_of_wk, reminder_date, reminder_type, assignee_nm,      reminder_audio_file_nm, reminder_audio_file_url, reminder_final_status,  reminder_elapsed_sec_qty) values (?,?,?,?,?,?,?,?,?,?,?,?) '''	
-			reminder_event = (reminder_script_nm, reminder_script_url, reminder_gmts, reminder_ts, reminder_day_of_wk, reminder_date, REMINDER_TYPE, curr_assignee_id, ALERT_WAV,              ALERT_FULL_PATH,         str_final_alert_status, int_elapsed_time_seconds)
+			reminder_event = (reminder_script_nm, reminder_script_url, reminder_gmts, reminder_ts, reminder_day_of_wk, reminder_date, REMINDER_TYPE, curr_assignee_id, ALERT_WAV,              ALERT_FULL_PATH,         final_status, int_elapsed_time_seconds)
 			insert_result=insert_event(conn, reminder_event)
 			print("Result of attempted insert: ", insert_result)
-
 
 			# Close DB Connection
 			conn.close()
 
 
-			if str_final_alert_status == 'BUTTON_PRESSED':
+			if final_status == 'BUTTON_PRESSED':
 				leds.pattern = Pattern.breathe(3000)
 				leds.update(Leds.rgb_pattern(Color.BLUE))
 
@@ -418,7 +361,7 @@ def final_wrap_up():
 				# "Breathe" blue for INT_HAPPY_BLINK_SECONDS seconds to show the alert was resolved
 				print("Sleeping for INT_HAPPY_BLINK_SECONDS: " + str(INT_HAPPY_BLINK_SECONDS))
 				time.sleep(INT_HAPPY_BLINK_SECONDS)
-			elif str_final_alert_status == 'TIMED_OUT':
+			elif final_status == 'TIMED_OUT':
 				# Update button light to "sad" yellow blinking
 				leds.pattern = Pattern.breathe(3000)
 				leds.update(Leds.rgb_pattern(Color.YELLOW))
@@ -432,7 +375,7 @@ def final_wrap_up():
 				print("Sleeping for INT_SAD_BLINK_SECONDS: " + str(INT_SAD_BLINK_SECONDS))
 				time.sleep(INT_SAD_BLINK_SECONDS)
 			else:
-				print("ERROR: Unknown final state, str_final_alert_status:" + str_final_alert_status)
+				print("ERROR: Unknown final state, final_status:" + final_status)
 				exit(1)
 
 
@@ -473,7 +416,6 @@ def insert_event(sql_conn,tpl_event):
 	cur.execute(sql, tpl_event)
 	sql_conn.commit()
 	return cur.lastrowid
-
 
 
 def run_query(sql_conn, str_query):
@@ -528,9 +470,6 @@ def run_query(sql_conn, str_query):
 
 
 
-
-
-
 def create_sqlite_conn(db_file):
 	print("Executing fuction: 'create_sqlite_conn(db_file)'")
 	""" create a database connection to a SQLite database """
@@ -546,7 +485,6 @@ def create_sqlite_conn(db_file):
 	return conn
 
 
-
 def update_button_state():
 	global button_state
 	if button_state == 'OFF':
@@ -559,27 +497,7 @@ def update_button_state():
 		print('Button was in an unknown state! Turning off now to be safe...')
 		button_state='OFF'
 	#print(button_state)
-
-
-
-def alert_resolved():
-	print("Executing fuction: 'alert_resolved()'")
-
-	global INT_HAPPY_BLINK_SECONDS
-	global THANK_YOU_FULL_PATH
-	
-	with Board() as board:
-		with Leds() as leds:
-			board.led.state = Led.OFF
-			p=subprocess.Popen([wav_player_full_path, '-wf', THANK_YOU_FULL_PATH, '-i', '1', '-s', str(INT_HAPPY_BLINK_SECONDS)])
-			#play_wav(THANK_YOU_FULL_PATH)
-			leds.pattern = Pattern.breathe(3000)
-			leds.update(Leds.rgb_pattern(Color.BLUE))
-			#"Breathe" blue for 9 seconds to show the alert was resolved
-			#time.sleep(INT_HAPPY_BLINK_SECONDS)
-			p.wait()
-			sys.exit(0)
-			
+		
 
 def testPathsOrFiles(pathList):
 	print("Executing fuction: 'testPathsOrFiles(pathList)'")
