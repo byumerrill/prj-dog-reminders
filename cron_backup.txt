@@ -22,7 +22,7 @@
 # m h  dom mon dow   command
 
 # Dog Potty alarms
-55 7 * * * /home/pi/Merrill/prj-dog-reminders/scripts/any_dog_reminder.py -rt potty
+30 7 * * * /home/pi/Merrill/prj-dog-reminders/scripts/any_dog_reminder.py -rt potty
 30 10 * * * /home/pi/Merrill/prj-dog-reminders/scripts/any_dog_reminder.py -rt potty
 0 13 * * * /home/pi/Merrill/prj-dog-reminders/scripts/any_dog_reminder.py -rt potty
 0 16 * * * /home/pi/Merrill/prj-dog-reminders/scripts/any_dog_reminder.py -rt potty
