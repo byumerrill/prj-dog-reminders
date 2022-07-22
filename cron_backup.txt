@@ -21,17 +21,17 @@
 #
 # m h  dom mon dow   command
 
+
 # Dog Potty alarms
-30 7 * * * /home/pi/Merrill/prj-dog-reminders/scripts/any_dog_reminder.py -rt potty
+15 8 * * * /home/pi/Merrill/prj-dog-reminders/scripts/any_dog_reminder.py -rt potty
 30 10 * * * /home/pi/Merrill/prj-dog-reminders/scripts/any_dog_reminder.py -rt potty
-0 13 * * * /home/pi/Merrill/prj-dog-reminders/scripts/any_dog_reminder.py -rt potty
-0 16 * * * /home/pi/Merrill/prj-dog-reminders/scripts/any_dog_reminder.py -rt potty
+5 12 * * * /home/pi/Merrill/prj-dog-reminders/scripts/any_dog_reminder.py -rt potty
+5 15 * * * /home/pi/Merrill/prj-dog-reminders/scripts/any_dog_reminder.py -rt potty
 0 19 * * * /home/pi/Merrill/prj-dog-reminders/scripts/any_dog_reminder.py -rt potty
 0 20 * * * /home/pi/Merrill/prj-dog-reminders/scripts/any_dog_reminder.py -rt potty
-
 # Dog Feeding alarms
-5 8 * * * /home/pi/Merrill/prj-dog-reminders/scripts/any_dog_reminder.py -rt feed
+20 8 * * * /home/pi/Merrill/prj-dog-reminders/scripts/any_dog_reminder.py -rt feed
 45 17 * * * /home/pi/Merrill/prj-dog-reminders/scripts/any_dog_reminder.py -rt feed
-
 # Brush teeth alarm
-25 8 * * * /home/pi/Merrill/prj-dog-reminders/scripts/brush_teeth_alarm.py
+50 8 * * * /home/pi/Merrill/prj-dog-reminders/scripts/brush_teeth_alarm.py
+
